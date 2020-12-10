@@ -1,0 +1,78 @@
+@require: stdjareport
+@require: itemize
+@require: annot
+
+@require: color
+
+@require: base/typeset/base
+@require: base/float
+
+@import: ../src/railway
+
+% Document-local function definition
+
+% code と graphics を縦に並べる。
+let-block ctx +gr-example ht grlst =
+  let ib = inline-graphics (get-text-width ctx) ht 0pt (fun (x, y) -> grlst |> List.map (shift-graphics (x, y))) in
+  let decoset = VDecoSet.simple-frame 0.5pt Color.black Color.white in
+  block-frame-breakable ctx (0pt, 0pt, 0pt, 0pt) decoset (fun ctx -> line-break false false ctx ib)
+
+let-block +horz-example code ht grlst =
+  '<%
+    +code(code);
+    +gr-example(ht)(grlst);
+  >%
+
+in
+
+document (|
+  title = {The Railway Package Manual};
+  author = {Your Name};
+|) '<
+  +p {
+    satysfi-railway は、 \SATySFi; のパスを楽に描くためのパッケージです。
+  }
+
+  +horz-example(```
+    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+    let rail2 = rail1 |> Rail.reflect-y in
+    let rail3 = Rail.concat [rail1; rail2] in
+    let rail4 = rail3 |> Rail.repeat 6 in
+    let rail5 = rail4 |> Rail.scale 0.3 0.3 in
+    let rail6 =
+      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+    in
+    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
+    [
+      rail1 |> Rail.gr-debug                    (50pt, 180pt);
+      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+      [stroke 2pt Color.black path];
+    ] |> List.concat
+  ```)(200pt)(
+
+    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+    let rail2 = rail1 |> Rail.reflect-y in
+    let rail3 = Rail.concat [rail1; rail2] in
+    let rail4 = rail3 |> Rail.repeat 6 in
+    let rail5 = rail4 |> Rail.scale 0.3 0.6 in
+    let rail6 =
+      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+    in
+    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
+    [
+      rail1 |> Rail.gr-debug                    (50pt, 180pt);
+      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+      [stroke 2pt Color.black path];
+    ] |> List.concat
+
+  );
+
+>

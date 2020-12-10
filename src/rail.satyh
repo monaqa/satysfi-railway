@@ -1,0 +1,262 @@
+@require: pervasives
+@require: base/list-ext
+@require: base/length
+@require: base/tuple
+@require: option
+@require: color
+@require: gr
+
+type point = length * length
+type vector = length * length
+
+% 一本の直線ないしベジェ曲線を表す型。
+% ただし、絶対位置について抽象化されており、どちらかというとベクトルに近い。
+% (v-dest, v-ctl1, v-ctl2) に対し、
+%   v-dest: 原点を始点としたときの終点
+%   v-ctl1: 始点に対する制御点（始点を原点としたときの相対座標）
+%   v-ctl2: 終点に対する制御点（終点を原点としたときの相対座標）
+% を表す。 v-ctl1, v-ctl2 が (0pt, 0pt) に等しいときは直線を表す。
+type curve = vector * vector * vector
+
+% vector 同士の和
+let (+.+) pt1 pt2 =
+  let (x1, y1) = pt1 in
+  let (x2, y2) = pt2 in
+  (x1 +' x2, y1 +' y2)
+
+% vector 同士の比較
+let (=') pt1 pt2 =
+  let (x1, y1) = pt1 in
+  let (x2, y2) = pt2 in
+  Length.(x1 == x2 && y1 == y2)
+
+% 極座標による vector の生成
+let (^.) l angle =
+  let rad = angle *. math-pi /. 180. in
+  (l *' (cos rad), l *' (sin rad))
+
+% vector の回転
+let (^.^) pt angle =
+  let rad = angle *. math-pi /. 180. in
+  let (x1, y1) = pt in
+  (
+    x1 *' (cos rad) -' y1 *' (sin rad),
+    y1 *' (sin rad) +' x1 *' (cos rad)
+  )
+
+module Rail : sig
+
+  type t
+
+% rail の作成
+  val init: t
+  val from-curves: curve list -> t
+  val push-line: vector -> t -> t
+  val push-curve: curve -> t -> t
+  val push-smooth-curve: vector -> vector -> t -> t
+  val append: t -> t -> t
+  val concat: t list -> t
+  val get-curves: t -> curve list
+
+% rail から path への変換
+  val to-pre-path: point -> t -> pre-path
+  val to-path: point -> t -> path
+  val to-loop: point -> t -> path
+
+% rail の補助情報の取得
+  val length: t -> int
+  val dest: t -> vector
+
+% rail の描画（基本的には path に変換するのがよい）
+  val gr-debug: color?-> length?-> point -> t -> graphics list
+
+% rail の変換
+  val (*): t -> float -> t  % スケール
+  val (^): t -> float -> t  % 回転
+  val scale: float -> float -> t -> t  % スケール
+  val reflect-x: t -> t  % x軸方向の（y軸を対称軸とした）反転
+  val reflect-y: t -> t  % y軸方向の（x軸を対称軸とした）反転
+  val affine-trans: (float * float * float * float) -> t -> t
+  val reverse: t -> t  % 曲線の形は変えないが、始点と終点を反転させる。
+  val repeat: int -> t -> t  % 同じrailをn個つなげる
+  val map-repeat: (int -> t) -> int -> t  % 生成規則 f(idx, prev-rail) にしたがってn回繰り返す
+
+end = struct
+
+  type t = curve list
+
+% 便利関数
+
+  let minus l = 0pt -' l
+
+  let-rec range n1 n2 =
+    let-rec aux min max =
+      if min == max  then [min] else min :: (aux (min + 1) max)
+    in
+    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
+
+
+% rail の作成
+
+  let init = []
+
+  let from-curves curvelst = curvelst
+  let get-curves curvelst = curvelst
+
+  let push-curve curve rail = List.append rail [curve]
+
+  let push-line v rail =
+    let line = (v, (0pt, 0pt), (0pt, 0pt)) in
+    List.append rail [line]
+
+  let push-smooth-curve v v-ctl rail =
+    let (_, _, (x-last-ctl, y-last-ctl)) =
+      rail |> List.last
+           |> Option.from ((0pt, 0pt), (0pt, 0pt), (0pt, 0pt))
+    in
+    List.append rail [(v, (minus x-last-ctl, minus y-last-ctl), v-ctl)]
+
+  let append rail1 rail2 = List.append rail1 rail2
+
+  let concat raillst = List.concat raillst
+
+% rail から path への変換
+  let to-pre-path pt rail =
+
+    let-rec aux rail-rev =
+      match rail-rev with
+      | [] ->
+          (pt |> start-path, pt)
+      | curve :: rest -> (
+          let (v-dest, v-ctl1, v-ctl2) = curve in
+          let (pth, pt-tmp) = aux rest in
+          if v-ctl1 =' (0pt, 0pt) && v-ctl2 =' (0pt, 0pt) then
+            (
+              pth |> line-to (pt-tmp +.+ v-dest),
+              pt-tmp +.+ v-dest
+            )
+          else
+            (
+              pth |> bezier-to (pt-tmp +.+ v-ctl1)
+                (pt-tmp +.+ v-dest +.+ v-ctl2) (pt-tmp +.+ v-dest),
+              pt-tmp +.+ v-dest
+            )
+      )
+    in
+
+    aux (List.reverse rail) |> Pair.fst
+
+  let to-path pt rail =
+    to-pre-path pt rail |> terminate-path
+
+  let to-loop pt rail =
+    to-pre-path pt rail |> close-with-line
+
+% rail の補助情報の取得
+  let dest rail =
+    let sum vect curve =
+      let (v-dest, _, _) = curve in
+      vect +.+ v-dest
+    in
+    rail |> List.fold-left sum (0pt, 0pt)
+
+  let length rail = List.length rail
+
+% rail の描画
+  let gr-debug ?:clr ?:thk pt rail =
+    let clr = clr |> Option.from Color.black in
+    let thk = thk |> Option.from 1pt in
+    let pth = rail |> to-path pt in
+
+    let grlst-vertex pt = [ fill clr (Gr.circle pt (thk *' 0.45)) ] in
+    let grlst-handle pt-start pt-end =
+      List.concat [
+        grlst-vertex pt-start;
+        [fill clr (Gr.circle pt-end (thk *' 0.35))];
+        [ stroke (thk *' 0.3) clr (Gr.line pt-start pt-end) ];
+      ]
+    in
+
+    let-rec aux rail-rev =
+      match rail-rev with
+      | [] ->
+          (grlst-vertex pt, pt)
+      | curve :: rest -> (
+          let (v-dest, v-ctl1, v-ctl2) = curve in
+          let (gr-lst, pt-tmp) = aux rest in
+          let pt-next = pt-tmp +.+ v-dest in
+          if v-ctl1 =' (0pt, 0pt) && v-ctl2 =' (0pt, 0pt) then
+            (
+              List.concat [ grlst-vertex pt-next ; gr-lst; ],
+              pt-next
+            )
+          else
+            (
+              List.concat [
+                grlst-handle pt-tmp (pt-tmp +.+ v-ctl1);
+                grlst-handle pt-next (pt-next +.+ v-ctl2);
+                gr-lst;
+              ],
+              pt-next
+            )
+      )
+    in
+
+    let aux-lines = aux (List.reverse rail) |> Pair.fst in
+    List.concat [
+      [
+        stroke thk (Color.gray 0.5) pth;
+        stroke (thk *' 0.3) clr pth;
+      ];
+      aux-lines;
+    ]
+
+% rail の変換
+  let (*) rail scale =
+    let f curve =
+      let ((x-dest, y-dest), (x-ctl1, y-ctl1), (x-ctl2, y-ctl2)) = curve in
+      (
+        (x-dest *' scale, y-dest *' scale),
+        (x-ctl1 *' scale, y-ctl1 *' scale),
+        (x-ctl2 *' scale, y-ctl2 *' scale)
+      )
+    in
+    rail |> List.map f
+
+  let affine-trans-vector mat v =
+    let (a, b, c, d) = mat in
+    let (x, y) = v in
+    (x *' a +' y *' b, x *' c +' y *' d)
+
+  let affine-trans-line mat curve =
+    let (v-dest, v-ctl1, v-ctl2) = curve in
+    (
+      affine-trans-vector mat v-dest,
+      affine-trans-vector mat v-ctl1,
+      affine-trans-vector mat v-ctl2
+    )
+
+  let affine-trans mat rail = rail |> List.map (affine-trans-line mat)
+
+  let (^) rail angle =
+    let rad = angle *. math-pi /. 180. in
+    rail |> affine-trans (cos rad, 0. -. (sin rad), sin rad, cos rad)
+
+  let scale xr yr = affine-trans (xr, 0., 0., yr)
+
+  let reflect-x = affine-trans ((0. -. 1.), 0., 0., 1.)
+  let reflect-y = affine-trans (1., 0., 0., (0. -. 1.))
+
+  % reverse
+  let reverse-line curve =
+    let ((x-dest, y-dest), (x-ctl1, y-ctl1), (x-ctl2, y-ctl2)) = curve in
+    ((minus x-dest, minus y-dest), (x-ctl2, y-ctl2), (x-ctl1, y-ctl1))
+
+  let reverse rail =
+    rail |> List.map reverse-line |> List.reverse
+
+  let repeat n rail = rail |> List.cycle- n
+
+  let map-repeat railf n = List.concat (range 0 (n - 1) |> List.map railf)
+
+end
