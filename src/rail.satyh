@@ -6,11 +6,14 @@
 @require: color
 @require: gr
 
+% どちらも同じ型だが、
+% point は座標上の一点を表したいときに、
+% vector はベクトルを表したいときに使うことにしている。
 type point = length * length
 type vector = length * length
 
 % 一本の直線ないしベジェ曲線を表す型。
-% ただし、絶対位置について抽象化されており、どちらかというとベクトルに近い。
+% ただし、絶対位置について抽象化されている。有向線分に対するベクトルみたいな立ち位置。
 % (v-dest, v-ctl1, v-ctl2) に対し、
 %   v-dest: 原点を始点としたときの終点
 %   v-ctl1: 始点に対する制御点（始点を原点としたときの相対座標）
@@ -121,6 +124,7 @@ end = struct
   let concat raillst = List.concat raillst
 
 % rail から path への変換
+
   let to-pre-path pt rail =
 
     let-rec aux rail-rev =
@@ -153,6 +157,7 @@ end = struct
     to-pre-path pt rail |> close-with-line
 
 % rail の補助情報の取得
+
   let dest rail =
     let sum vect curve =
       let (v-dest, _, _) = curve in
@@ -163,6 +168,7 @@ end = struct
   let length rail = List.length rail
 
 % rail の描画
+
   let gr-debug ?:clr ?:thk pt rail =
     let clr = clr |> Option.from Color.black in
     let thk = thk |> Option.from 1pt in
@@ -212,6 +218,7 @@ end = struct
     ]
 
 % rail の変換
+
   let (*) rail scale =
     let f curve =
       let ((x-dest, y-dest), (x-ctl1, y-ctl1), (x-ctl2, y-ctl2)) = curve in
