@@ -23,6 +23,16 @@ let-block +horz-example code ht grlst =
     +gr-example(ht)(grlst);
   >%
 
+let float-mod flt1 flt2 =
+  let-rec aux (q, r) =
+    if Float.(r < flt2) then
+      (q, r)
+    else
+      aux (q + 1, r -. flt2)
+  in
+  let (q, r) = aux (0, flt1) in
+  (q, r)
+
 in
 
 document (|
@@ -73,6 +83,25 @@ document (|
       [stroke 2pt Color.black path];
     ] |> List.concat
 
+  );
+
+  +horz-example(```
+  ```)(100pt)(
+    let rail1 = Rail.circular-sector 10pt in
+    let rail2 = Rail.circular-sector ?:30.0 10pt in
+    let rail3 =
+      Rail.map-repeat (fun i -> Rail.(rail1 ^ ((float i) *. 90.0))) 4
+    in
+    let rail4 =
+      Rail.map-repeat (fun i -> Rail.(rail2 ^ ((float i) *. 30.0))) 12
+    in
+    let rail5 = Rail.circular-sector ?:(340.) 10pt in
+    let draw pt r = [r |> Rail.to-path pt |> stroke 1pt Color.black] in
+    [
+      rail3 |> draw (50pt, 50pt);
+      rail4 |> Rail.gr-debug (50pt, 50pt);
+      rail5 |> draw (100pt, 50pt);
+    ] |> List.concat
   );
 
 >

@@ -44,7 +44,7 @@ let (^.^) pt angle =
   let (x1, y1) = pt in
   (
     x1 *' (cos rad) -' y1 *' (sin rad),
-    y1 *' (sin rad) +' x1 *' (cos rad)
+    x1 *' (sin rad) +' y1 *' (cos rad)
   )
 
 module Rail : sig
@@ -84,6 +84,13 @@ module Rail : sig
   val repeat: int -> t -> t  % 同じrailをn個つなげる
   val map-repeat: (int -> t) -> int -> t  % 生成規則 f(idx, prev-rail) にしたがってn回繰り返す
 
+% 部分的な切り取り
+  % val partial: int -> int -> t -> t
+  % val trim: float -> float -> t -> t
+
+% 円弧
+  val circular-sector: float?-> length -> t  % 半径と角度を指定した円弧
+
 end = struct
 
   type t = curve list
@@ -96,7 +103,7 @@ end = struct
     let-rec aux min max =
       if min == max  then [min] else min :: (aux (min + 1) max)
     in
-    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
+    if n1 <= n2 then (aux n1 n2) else []
 
 
 % rail の作成
@@ -265,5 +272,50 @@ end = struct
   let repeat n rail = rail |> List.cycle- n
 
   let map-repeat railf n = List.concat (range 0 (n - 1) |> List.map railf)
+
+% 円弧
+
+  % ひとまず 0 <= angle <= 90 を仮定
+  let circular-sector-between-0-90 angle radius =
+    let center = (minus radius, 0pt) in
+    let dest = center +.+ (radius ^. angle) in
+    let len-ctl = radius *' ((4.0 /. 3.0) *. (tan (angle *. math-pi /. 720.))) in  % 制御ハンドルの長さ
+    let pt-ctl-begin = (0pt, len-ctl) in
+    let pt-ctl-end = (0pt, minus len-ctl) ^.^ angle in
+
+    from-curves [(dest, pt-ctl-begin, pt-ctl-end)]
+
+  % float を float で割ったときの商と余りを求める。
+  % ただし flt1 > 0, flt2 > 0 を仮定する。
+  let float-mod flt1 flt2 =
+    let-rec aux (q, r) =
+      if Float.(r < flt2) then
+        (q, r)
+      else
+        aux (q + 1, r -. flt2)
+    in
+    aux (0, flt1)
+
+  let circular-sector ?:angle radius =
+    let angle = angle |> Option.from 90.0 in
+
+    let aux angle =
+      let (q, r) = float-mod angle 90.0 in
+      let curve1 =
+        map-repeat (
+          fun i -> (circular-sector-between-0-90 90. radius) ^ (90. *. (float i))
+        ) q
+      in
+      let curve2 = (circular-sector-between-0-90 r radius) ^ (90. *. (float q)) in
+      concat [curve1; curve2]
+    in
+
+    if Float.(angle > 0.) then
+      aux angle
+    else
+      aux (0. -. angle) |> reflect-y
+
+
+
 
 end
