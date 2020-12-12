@@ -104,4 +104,47 @@ document (|
     ] |> List.concat
   );
 
+  +horz-example(` `)(100pt)(
+    let curve = ((100pt, 0pt), (10pt, 20pt), (-10pt, -20pt)) in
+    let (c1, c2) = curve |> split-bezier 1.3 in
+    let c3 = curve |> partial-bezier 1.0 1.2 in
+
+    let rail1 = Rail.from-curves [curve] in
+    let rail2 = Rail.from-curves [c1; c2] in
+    let rail3 = Rail.from-curves [c3] in
+
+    [
+      rail1 |> Rail.gr-debug (50pt, 50pt);
+      rail2 |> Rail.gr-debug (160pt, 50pt);
+      rail3 |> Rail.gr-debug (270pt, 50pt);
+    ] |> List.concat
+
+  );
+
+  +horz-example(` `)(100pt)(
+    let wave-example conf (x, y) len =
+      [
+        fill (Color.gray 0.8) (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
+        WavyLine.new len conf |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
+      ]
+    in
+    [
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
+      wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;
+      wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;
+
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
+    ] |> List.concat
+
+  );
+
+  +p{
+    \uwave{The quick fox} jumps \uwave{over} the \uwave{怠惰な犬}.
+  }
+
 >

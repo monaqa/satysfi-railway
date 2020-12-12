@@ -5,5 +5,6 @@
 
 % load standard list package
 @import: rail
+@import: wavyline
 
 let () = ()
