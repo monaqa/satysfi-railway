@@ -96,54 +96,57 @@ let (^.^) (x, y) angle =
 
 module Rail : sig
 
-  type t
+  type rail
 
 % rail の作成
-  val init: t
-  val from-curves: curve list -> t
-  val push-line: vector -> t -> t
-  val push-curve: curve -> t -> t
-  val push-smooth-curve: vector -> vector -> t -> t
-  val append: t -> t -> t
-  val concat: t list -> t
-  val get-curves: t -> curve list
+  val init: rail
+  val from-curves: curve list -> rail
+% rail の結合
+  val push-line: vector -> rail -> rail
+  val push-curve: curve -> rail -> rail
+  val push-smooth-curve: vector -> vector -> rail -> rail
+  val append: rail -> rail -> rail
+  val concat: rail list -> rail
+
+% 
+  val get-curves: rail -> curve list
 
 % rail から path への変換
-  val to-pre-path: point -> t -> pre-path
-  val to-path: point -> t -> path
-  val to-loop: point -> t -> path
+  val to-pre-path: point -> rail -> pre-path
+  val to-path: point -> rail -> path
+  val to-loop: point -> rail -> path
 
 % rail の補助情報の取得
-  val length: t -> int
-  val dest: t -> vector  % レールの終着点。
-  % val dest-nth: int -> t -> vector option
-  % val ctrl-nth: int -> t -> (vector * vector) option
+  val length: rail -> int
+  val dest: rail -> vector  % レールの終着点。
+  % val dest-nth: int -> rail -> vector option
+  % val ctrl-nth: int -> rail -> (vector * vector) option
 
 % rail の描画（基本的には path に変換するのがよい）
-  val gr-debug: color?-> length?-> point -> t -> graphics list
+  val gr-debug: color?-> length?-> point -> rail -> graphics list
 
 % rail の変換
-  val (*): t -> float -> t  % スケール
-  val (^): t -> float -> t  % 回転
-  val scale: float -> float -> t -> t  % スケール
-  val reflect-x: t -> t  % x軸方向の（y軸を対称軸とした）反転
-  val reflect-y: t -> t  % y軸方向の（x軸を対称軸とした）反転
-  val affine-trans: (float * float * float * float) -> t -> t
-  val reverse: t -> t  % 曲線の形は変えないが、始点と終点を反転させる。
-  val repeat: int -> t -> t  % 同じrailをn個つなげる
-  val map-repeat: (int -> t) -> int -> t  % 生成規則 f(idx, prev-rail) にしたがってn回繰り返す
+  val (*): rail -> float -> rail  % スケール
+  val (^): rail -> float -> rail  % 回転
+  val scale: float -> float -> rail -> rail  % スケール
+  val reflect-x: rail -> rail  % x軸方向の（y軸を対称軸とした）反転
+  val reflect-y: rail -> rail  % y軸方向の（x軸を対称軸とした）反転
+  val affine-trans: (float * float * float * float) -> rail -> rail
+  val reverse: rail -> rail  % 曲線の形は変えないが、始点と終点を反転させる。
+  val repeat: int -> rail -> rail  % 同じrailをn個つなげる
+  val map-repeat: (int -> rail) -> int -> rail  % 生成規則 f(idx, prev-rail) にしたがってn回繰り返す
 
 % 部分的な切り取り
-  % val at: float -> t -> vector option
-  % val partial: int -> int -> t -> t
-  % val trim: float -> float -> t -> t
+  % val at: float -> rail -> vector option
+  % val partial: int -> int -> rail -> rail
+  % val trim: float -> float -> rail -> rail
 
 % 円弧
-  val circular-sector: float?-> length -> t  % 半径と角度を指定した円弧
+  val circular-sector: float?-> length -> rail  % 半径と角度を指定した円弧
 
 end = struct
 
-  type t = curve list
+  type rail = curve list
 
 % 便利関数
 
