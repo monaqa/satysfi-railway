@@ -101,10 +101,12 @@ module Rail : sig
 % rail の作成
   val init: rail
   val from-curves: curve list -> rail
-% rail の結合
   val push-line: vector -> rail -> rail
   val push-curve: curve -> rail -> rail
   val push-smooth-curve: vector -> vector -> rail -> rail
+  val circular-sector: float?-> length -> rail  % 半径と角度を指定した円弧
+
+% rail の結合
   val append: rail -> rail -> rail
   val concat: rail list -> rail
 
@@ -140,9 +142,6 @@ module Rail : sig
   % val at: float -> rail -> vector option
   % val partial: int -> int -> rail -> rail
   % val trim: float -> float -> rail -> rail
-
-% 円弧
-  val circular-sector: float?-> length -> rail  % 半径と角度を指定した円弧
 
 end = struct
 

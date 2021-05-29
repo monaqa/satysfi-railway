@@ -23,6 +23,26 @@ let-block +horz-example code ht grlst =
     +gr-example(ht)(grlst);
   >%
 
+let-block ctx +vert-example ?:min-ht code wid grlst =
+  let pads =
+    (0pt, wid +' 10pt, 0pt, 0pt)
+  in
+  let decos =
+    let twid = get-text-width ctx in
+    let deco (x, y) w h _ =
+      let rect =
+        stroke 0.5pt Color.black (Gr.rectangle (x +' twid -' wid, y) (x +' w, y +' h))
+      in
+      rect :: (grlst |> List.map (shift-graphics (x +' twid -' wid, y)))
+    in
+    let empty _ _ _ _ = [] in
+    (deco, deco, empty, empty)
+  in
+  let btf ctx2 =
+    read-block ctx2 '<+code(code);>
+  in
+  block-frame-breakable ctx pads decos btf
+
 let float-mod flt1 flt2 =
   let-rec aux (q, r) =
     if Float.(r < flt2) then
@@ -33,118 +53,320 @@ let float-mod flt1 flt2 =
   let (q, r) = aux (0, flt1) in
   (q, r)
 
+let debug = Rail.gr-debug ?:(Color.orange) ?:(3pt)
+
 in
 
 document (|
   title = {The Railway Package Manual};
   author = {Your Name};
 |) '<
-  +p {
-    satysfi-railway は、 \SATySFi; のパスを楽に描くためのパッケージです。
-  }
 
-  +horz-example(```
-    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
-    let rail2 = rail1 |> Rail.reflect-y in
-    let rail3 = Rail.concat [rail1; rail2] in
-    let rail4 = rail3 |> Rail.repeat 6 in
-    let rail5 = rail4 |> Rail.scale 0.3 0.3 in
-    let rail6 =
-      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
-    in
-    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
-    [
-      rail1 |> Rail.gr-debug                    (50pt, 180pt);
-      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
-      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
-      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
-      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
-      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
-      [stroke 2pt Color.black path];
-    ] |> List.concat
-  ```)(200pt)(
++p{
+  `satysfi-railway` は \SATySFi; のパスを楽に描くためのパッケージです。
+}
++p{
+  SATySFi では標準で直線や Bezier 曲線を描く機能が付いているものの、
+  曲線のパーツを使い回すことは容易ではなく、
+  規則的で対称的な図形を描くためにユーザが点の座標をいろいろと計算する必要がありました。
+}
++p{
+  `satysfi-railway` はパスの情報を相対座標で保持する `Rail.rail` 型を用いることで、
+  パスの使い回しを容易にします。
+  また、玩具の電車を走らせるレールのように複数の `rail` を繋げることで
+  複雑な図形をも楽に作成することができるようになります。
+  以下、具体例を交えて説明します。
+}
 
-    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
-    let rail2 = rail1 |> Rail.reflect-y in
-    let rail3 = Rail.concat [rail1; rail2] in
-    let rail4 = rail3 |> Rail.repeat 6 in
-    let rail5 = rail4 |> Rail.scale 0.3 0.6 in
-    let rail6 =
-      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
-    in
-    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
-    [
-      rail1 |> Rail.gr-debug                    (50pt, 180pt);
-      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
-      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
-      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
-      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
-      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
-      [stroke 2pt Color.black path];
-    ] |> List.concat
-
-  );
-
-  +horz-example(```
-  ```)(100pt)(
-    let rail1 = Rail.circular-sector 10pt in
-    let rail2 = Rail.circular-sector ?:30.0 10pt in
-    let rail3 =
-      Rail.map-repeat (fun i -> Rail.(rail1 ^ ((float i) *. 90.0))) 4
-    in
-    let rail4 =
-      Rail.map-repeat (fun i -> Rail.(rail2 ^ ((float i) *. 30.0))) 12
-    in
-    let rail5 = Rail.circular-sector ?:(340.) 10pt in
-    let draw pt r = [r |> Rail.to-path pt |> stroke 1pt Color.black] in
-    [
-      rail3 |> draw (50pt, 50pt);
-      rail4 |> Rail.gr-debug (50pt, 50pt);
-      rail5 |> draw (100pt, 50pt);
-    ] |> List.concat
-  );
-
-  +horz-example(` `)(100pt)(
-    let curve = ((100pt, 0pt), (10pt, 20pt), (-10pt, -20pt)) in
-    let (c1, c2) = curve |> split-bezier 1.3 in
-    let c3 = curve |> partial-bezier 1.0 1.2 in
-
-    let rail1 = Rail.from-curves [curve] in
-    let rail2 = Rail.from-curves [c1; c2] in
-    let rail3 = Rail.from-curves [c3] in
-
-    [
-      rail1 |> Rail.gr-debug (50pt, 50pt);
-      rail2 |> Rail.gr-debug (160pt, 50pt);
-      rail3 |> Rail.gr-debug (270pt, 50pt);
-    ] |> List.concat
-
-  );
-
-  +horz-example(` `)(100pt)(
-    let wave-example conf (x, y) len =
-      [
-        fill (Color.gray 0.8) (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
-        WavyLine.new len conf |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
-      ]
-    in
-    [
-      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
-      wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;
-      wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;
-      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;
-
-      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
-      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
-      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
-      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
-      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
-    ] |> List.concat
-
-  );
++chapter{Gallery}<
 
   +p{
-    \uwave{The quick fox} jumps \uwave{over} the \uwave{怠惰な犬}.
+    `satysfi-railway` は `Rail` モジュールを提供します。
+    `Rail` モジュールの主人公は `Rail.rail` 型であり、
+    `Rail` モジュール内にあるすべての関数は
+    すべて `rail` 型の作成、結合、変換などに関連する機能を持ちます。
   }
+
+  +section{作成}<
+    +p{
+      `rail` 型の値は `Rail.init` によって簡単に作成することができます。
+    }
+
+    +code(```
+      let rail = Rail.init in rail
+    ```);
+
+    +p{
+      しかしこれでできるのはいわば「空のパス」であり、このままでは何の意味もありません。
+      `Rail.push-line` および `Rail.push-curve` で線を追加することができます。
+    }
+
+    +horz-example(```
+      let rail = Rail.init
+        |> Rail.push-line (50pt, 20pt)
+        |> Rail.push-curve ((50pt, -20pt), (10pt, 10pt), (-10pt, -10pt))
+      in
+    ```)(50pt)(
+      let rail = Rail.init
+        |> Rail.push-line (50pt, 20pt)
+        |> Rail.push-curve ((50pt, -20pt), (10pt, 10pt), (-10pt, -10pt))
+      in
+      rail |> Rail.gr-debug ?:(Color.blue) ?:(3pt) (10pt, 10pt)
+    );
+
+    +p{
+      `push-line` は `vector` 型の引数を持ちます。
+      これは `length * length` 型のシノニムですが、
+      「点の位置」というより「ベクトル」と考えた方が近いものです。
+      `push-line x` は「起点からベクトル `x` の方向に直線を引く」ということを意味します。
+    }
+
+    +p{
+      `push-line` は `vector * vector * vector` 型の引数を持ち、
+      \listing{
+        * 目的地のベクトル
+        * 曲線開始時の制御ハンドルの相対座標
+        * 曲線終了時の制御ハンドルの相対座標
+      }
+      を表します。
+      たとえば上の例では
+      \listing{
+        * 最終的に x 軸方向に `50pt` 上、 y 軸方向に `20pt` 下の位置に向かう
+        * 曲線の開始時の制御ハンドルは `(10pt, 10pt)`
+        * 曲線の終了時の制御ハンドルは `(-10pt, -10pt)`
+      }
+      となっており、確かにその通りに線が引かれています。
+    }
+  >
+
+  +section({描画})(
+    let rail1 = Rail.init
+      |> Rail.push-curve ((50pt, 0pt), (30pt, 30pt), (-30pt, -30pt))
+      |> Rail.push-smooth-curve (50pt, 0pt) (-30pt, -30pt)
+      |> Rail.push-line (50pt, 10pt)
+    in
+  '<
+
+    +p{
+      せっかく `rail` を作っても、パスやグラフィックスとして描画できなければ意味がありません。
+      `rail` は `to-path`, `to-loop` 関数によって `path` 型に変換できます。
+      ともに `point` と `rail` 型を引数に持ち、与えられた `point` を開始点の座標として持つような `rail` をパスの形式で出力します。
+      `to-loop` 関数の場合、開始点と終了点は直線で結ばれます。
+      ループを描きたいときは、基本的に開始点と終了点の座標を一致させるのがよいでしょう。
+    }
+
+    +horz-example(```
+    let rail1 = Rail.init
+      |> Rail.push-curve ((50pt, 0pt), (30pt, 30pt), (-30pt, -30pt))
+      |> Rail.push-smooth-curve (50pt, 0pt) (-30pt, -30pt)
+      |> Rail.push-line (50pt, 10pt)
+    in
+    [
+      rail1 |> Rail.to-path (10pt, 30pt) |> stroke 1pt Color.red;
+      rail1 |> Rail.to-loop (10pt, 20pt) |> stroke 1pt Color.black;
+    ]
+    ```)(50pt)(
+    [
+      rail1 |> Rail.to-path (10pt, 30pt) |> stroke 1pt Color.red;
+      rail1 |> Rail.to-loop (10pt, 20pt) |> stroke 1pt Color.black;
+    ]
+    );
+
+    +p{
+      デバッグ用途には `gr-debug` 関数が役に立ちます。
+      これは `to-path` と同様の引数で `graphics list` 型を出力するものであり、
+      rail に関する多くの情報を表示することができます。
+      具体的には点の位置およびハンドルが表示されるようになります。
+      `gr-debug` では線の太さや色を変更することもできます。
+    }
+
+    +horz-example(```
+      [
+        rail1 |> Rail.gr-debug (10pt, 50pt);
+        rail1 |> Rail.gr-debug ?:(Color.blue) ?:(4pt) (200pt, 50pt);
+      ] |> List.concat
+    ```)(100pt)(
+      [
+        rail1 |> Rail.gr-debug (10pt, 50pt);
+        rail1 |> Rail.gr-debug ?:(Color.blue) ?:(4pt) (200pt, 50pt);
+      ] |> List.concat
+    );
+
+  >);
+
+  +section({結合})(
+    let rail1 = Rail.from-curves [
+      ((40pt, 0pt), (0pt, 0pt), (0pt, 0pt));
+      ((40pt, 20pt), (20pt, 0pt), (-10pt, -20pt));
+      ((40pt, -20pt), (20pt, 0pt), (-10pt, 20pt));
+    ]
+    in
+    let rail2 = rail1 |> Rail.append rail1 in
+    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    '<
+
+    +p{
+      `rail` 同士は自由に結合することができます。
+    }
+
+    +horz-example(```
+    let rail1 = Rail.from-curves [
+      ((40pt, 0pt), (0pt, 0pt), (0pt, 0pt));
+      ((40pt, 20pt), (20pt, 0pt), (0pt, -20pt));
+      ((40pt, -20pt), (20pt, 0pt), (0pt, 20pt));
+    ]
+    in
+    let rail2 = rail1 |> Rail.append rail1 in
+    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    ```)(150pt)(
+      [
+        rail1 |> debug (10pt, 100pt);
+        rail2 |> debug (150pt, 100pt);
+        rail3 |> debug (10pt, 50pt);
+      ] |> List.concat
+    );
+
+  >);
+
+  +section({変換})(
+    let rail1 = Rail.from-curves [
+      ((40pt, 0pt), (0pt, 0pt), (0pt, 0pt));
+      ((40pt, 20pt), (20pt, 0pt), (-10pt, -20pt));
+      ((40pt, -20pt), (20pt, 0pt), (-10pt, 20pt));
+    ]
+    in
+    let rail2 = rail1 |> Rail.append rail1 in
+    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    '<
+
+    +p{
+      `rail` は結合だけでなく、回転やスケール変換などある程度自由に行うことができます。
+    }
+
+    +horz-example(```
+    let rail1 = Rail.from-curves [
+      ((40pt, 0pt), (0pt, 0pt), (0pt, 0pt));
+      ((40pt, 20pt), (20pt, 0pt), (0pt, -20pt));
+      ((40pt, -20pt), (20pt, 0pt), (0pt, 20pt));
+    ]
+    in
+    let rail2 = rail1 |> Rail.append rail1 in
+    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    ```)(150pt)(
+      [
+        rail1 |> debug (10pt, 100pt);
+        rail2 |> debug (150pt, 100pt);
+        rail3 |> debug (10pt, 50pt);
+      ] |> List.concat
+    );
+
+  >);
+
+>
+
+
++horz-example(```
+  let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+  let rail2 = rail1 |> Rail.reflect-y in
+  let rail3 = Rail.concat [rail1; rail2] in
+  let rail4 = rail3 |> Rail.repeat 6 in
+  let rail5 = rail4 |> Rail.scale 0.3 0.3 in
+  let rail6 =
+    Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+  in
+  let path = rail6 |> Rail.to-loop (150pt, 10pt) in
+  [
+    rail1 |> Rail.gr-debug                    (50pt, 180pt);
+    rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+    rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+    rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+    rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+    rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+    [stroke 2pt Color.black path];
+  ] |> List.concat
+```)(200pt)(
+
+  let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+  let rail2 = rail1 |> Rail.reflect-y in
+  let rail3 = Rail.concat [rail1; rail2] in
+  let rail4 = rail3 |> Rail.repeat 6 in
+  let rail5 = rail4 |> Rail.scale 0.3 0.6 in
+  let rail6 =
+    Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+  in
+  let path = rail6 |> Rail.to-loop (150pt, 10pt) in
+  [
+    rail1 |> Rail.gr-debug                    (50pt, 180pt);
+    rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+    rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+    rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+    rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+    rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+    [stroke 2pt Color.black path];
+  ] |> List.concat
+
+);
+
++horz-example(```
+```)(100pt)(
+  let rail1 = Rail.circular-sector 10pt in
+  let rail2 = Rail.circular-sector ?:30.0 10pt in
+  let rail3 =
+    Rail.map-repeat (fun i -> Rail.(rail1 ^ ((float i) *. 90.0))) 4
+  in
+  let rail4 =
+    Rail.map-repeat (fun i -> Rail.(rail2 ^ ((float i) *. 30.0))) 12
+  in
+  let rail5 = Rail.circular-sector ?:(340.) 10pt in
+  let draw pt r = [r |> Rail.to-path pt |> stroke 1pt Color.black] in
+  [
+    rail3 |> draw (50pt, 50pt);
+    rail4 |> Rail.gr-debug (50pt, 50pt);
+    rail5 |> draw (100pt, 50pt);
+  ] |> List.concat
+);
+
++horz-example(` `)(100pt)(
+  let curve = ((100pt, 0pt), (10pt, 20pt), (-10pt, -20pt)) in
+  let (c1, c2) = curve |> split-bezier 1.3 in
+  let c3 = curve |> partial-bezier 1.0 1.2 in
+
+  let rail1 = Rail.from-curves [curve] in
+  let rail2 = Rail.from-curves [c1; c2] in
+  let rail3 = Rail.from-curves [c3] in
+
+  [
+    rail1 |> Rail.gr-debug (50pt, 50pt);
+    rail2 |> Rail.gr-debug (160pt, 50pt);
+    rail3 |> Rail.gr-debug (270pt, 50pt);
+  ] |> List.concat
+
+);
+
++horz-example(` `)(100pt)(
+  let wave-example conf (x, y) len =
+    [
+      fill (Color.gray 0.8) (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
+      WavyLine.new len conf |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
+    ]
+  in
+  [
+    wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
+    wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;
+    wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;
+    wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;
+
+    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
+    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
+    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
+    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
+    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
+  ] |> List.concat
+
+);
+
++p{
+  \uwave{The quick fox} jumps \uwave{over} the \uwave{怠惰な犬}.
+}
 
 >
