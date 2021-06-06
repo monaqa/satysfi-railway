@@ -1,3 +1,3 @@
-# [WIP] satysfi-railway
+# satysfi-railway
 
 Drawing library for SATySFi.
