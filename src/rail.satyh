@@ -109,6 +109,7 @@ module Rail : sig
 % rail の結合
   val append: rail -> rail -> rail
   val concat: rail list -> rail
+  val (---): rail -> rail -> rail  % 結合
 
 % 
   val get-curves: rail -> curve list
@@ -179,6 +180,7 @@ end = struct
     List.append rail [(v, (minus x-last-ctl, minus y-last-ctl), v-ctl)]
 
   let append rail1 rail2 = List.append rail1 rail2
+  let (---) rail1 rail2 = append rail1 rail2
 
   let concat raillst = List.concat raillst
 

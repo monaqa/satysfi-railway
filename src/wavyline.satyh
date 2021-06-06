@@ -11,7 +11,7 @@ type wave-config = (|
 module WavyLine : sig
 
   % val new: length -> float -> float -> Rail.t
-  val new: length -> wave-config -> Rail.t
+  val new: length -> wave-config -> Rail.rail
 
   direct \uwave : [wave-config?; inline-text] inline-cmd
 

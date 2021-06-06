@@ -68,13 +68,11 @@ document (|
 +p{
   SATySFi では標準で直線や Bezier 曲線を描く機能が付いているものの、
   曲線のパーツを使い回すことは容易ではなく、
-  規則的で対称的な図形を描くためにユーザが点の座標をいろいろと計算する必要がありました。
-}
-+p{
+  規則的で対称的な図形を描くためにはユーザが点の座標をいろいろと計算する必要がありました。
   `satysfi-railway` はパスの情報を相対座標で保持する `Rail.rail` 型を用いることで、
-  パスの使い回しを容易にします。
-  また、玩具の電車を走らせるレールのように複数の `rail` を繋げることで
-  複雑な図形をも楽に作成することができるようになります。
+  一度作成した曲線を容易に使い回せるようにしました。
+  単純な形をした玩具のレールもつなぎ合わせれば複雑な形の線路ができるように、
+  複数の rail を繋げれば複雑な図形をも楽に作成することができるようになります。
   以下、具体例を交えて説明します。
 }
 
@@ -82,7 +80,7 @@ document (|
 
   +p{
     `satysfi-railway` は `Rail` モジュールを提供します。
-    `Rail` モジュールの主人公は `Rail.rail` 型であり、
+    `Rail` には `Rail.rail` 型があり、
     `Rail` モジュール内にあるすべての関数は
     すべて `rail` 型の作成、結合、変換などに関連する機能を持ちます。
   }
@@ -235,12 +233,17 @@ document (|
       ((40pt, -20pt), (20pt, 0pt), (-10pt, 20pt));
     ]
     in
-    let rail2 = rail1 |> Rail.append rail1 in
-    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    let rail2 = Rail.(
+      concat [ rail1; rail1 ^ 90.; rail1 ^ 180.; rail1 ^ 270.; ]
+    )
+    in
+    let rail3 =
+      Rail.(rail1 * 0.3 --- ((rail1 * 0.5) ^ 45.) )
+    in
     '<
 
     +p{
-      `rail` は結合だけでなく、回転やスケール変換などある程度自由に行うことができます。
+      `rail` は結合だけでなく、回転やスケール変換などを施すことができます。
     }
 
     +horz-example(```
@@ -250,123 +253,170 @@ document (|
       ((40pt, -20pt), (20pt, 0pt), (0pt, 20pt));
     ]
     in
-    let rail2 = rail1 |> Rail.append rail1 in
-    let rail3 = Rail.concat [ rail1; rail1; rail1; ] in
+    let rail2 = Rail.(
+      concat [ rail1; rail1 ^ 90.; rail1 ^ 180.; rail1 ^ 270.; ]
+    )
+    in
+    let rail3 =
+      Rail.(rail1 * 0.3 --- ((rail1 * 0.5) ^ 45.) )
+    in
     ```)(150pt)(
       [
         rail1 |> debug (10pt, 100pt);
-        rail2 |> debug (150pt, 100pt);
-        rail3 |> debug (10pt, 50pt);
+        rail2 |> debug (150pt, 10pt);
+        rail3 |> debug (290pt, 10pt);
       ] |> List.concat
     );
 
   >);
 
->
+  +p{
+    そのほかにも様々な関数が提供されています。
+    ちょっと遊んでみましょう。
+  }
 
-
-+horz-example(```
-  let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
-  let rail2 = rail1 |> Rail.reflect-y in
-  let rail3 = Rail.concat [rail1; rail2] in
-  let rail4 = rail3 |> Rail.repeat 6 in
-  let rail5 = rail4 |> Rail.scale 0.3 0.3 in
-  let rail6 =
-    Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
-  in
-  let path = rail6 |> Rail.to-loop (150pt, 10pt) in
-  [
-    rail1 |> Rail.gr-debug                    (50pt, 180pt);
-    rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
-    rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
-    rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
-    rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
-    rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
-    [stroke 2pt Color.black path];
-  ] |> List.concat
-```)(200pt)(
-
-  let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
-  let rail2 = rail1 |> Rail.reflect-y in
-  let rail3 = Rail.concat [rail1; rail2] in
-  let rail4 = rail3 |> Rail.repeat 6 in
-  let rail5 = rail4 |> Rail.scale 0.3 0.6 in
-  let rail6 =
-    Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
-  in
-  let path = rail6 |> Rail.to-loop (150pt, 10pt) in
-  [
-    rail1 |> Rail.gr-debug                    (50pt, 180pt);
-    rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
-    rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
-    rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
-    rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
-    rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
-    [stroke 2pt Color.black path];
-  ] |> List.concat
-
-);
-
-+horz-example(```
-```)(100pt)(
-  let rail1 = Rail.circular-sector 10pt in
-  let rail2 = Rail.circular-sector ?:30.0 10pt in
-  let rail3 =
-    Rail.map-repeat (fun i -> Rail.(rail1 ^ ((float i) *. 90.0))) 4
-  in
-  let rail4 =
-    Rail.map-repeat (fun i -> Rail.(rail2 ^ ((float i) *. 30.0))) 12
-  in
-  let rail5 = Rail.circular-sector ?:(340.) 10pt in
-  let draw pt r = [r |> Rail.to-path pt |> stroke 1pt Color.black] in
-  [
-    rail3 |> draw (50pt, 50pt);
-    rail4 |> Rail.gr-debug (50pt, 50pt);
-    rail5 |> draw (100pt, 50pt);
-  ] |> List.concat
-);
-
-+horz-example(` `)(100pt)(
-  let curve = ((100pt, 0pt), (10pt, 20pt), (-10pt, -20pt)) in
-  let (c1, c2) = curve |> split-bezier 1.3 in
-  let c3 = curve |> partial-bezier 1.0 1.2 in
-
-  let rail1 = Rail.from-curves [curve] in
-  let rail2 = Rail.from-curves [c1; c2] in
-  let rail3 = Rail.from-curves [c3] in
-
-  [
-    rail1 |> Rail.gr-debug (50pt, 50pt);
-    rail2 |> Rail.gr-debug (160pt, 50pt);
-    rail3 |> Rail.gr-debug (270pt, 50pt);
-  ] |> List.concat
-
-);
-
-+horz-example(` `)(100pt)(
-  let wave-example conf (x, y) len =
+  +horz-example(```
+    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+    let rail2 = rail1 |> Rail.reflect-y in
+    let rail3 = Rail.concat [rail1; rail2] in
+    let rail4 = rail3 |> Rail.repeat 6 in
+    let rail5 = rail4 |> Rail.scale 0.3 0.3 in
+    let rail6 =
+      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+    in
+    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
     [
-      fill (Color.gray 0.8) (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
-      WavyLine.new len conf |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
-    ]
-  in
-  [
-    wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
-    wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;
-    wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;
-    wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;
+      rail1 |> Rail.gr-debug                    (50pt, 180pt);
+      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+      [fill (Color.gray 0.8) path];
+    ] |> List.concat
+  ```)(200pt)(
 
-    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
-    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
-    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
-    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
-    wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
-  ] |> List.concat
+    let rail1 = Rail.from-curves [((20pt, 0pt), (5pt, 8pt), (-5pt, 8pt))] in
+    let rail2 = rail1 |> Rail.reflect-y in
+    let rail3 = Rail.concat [rail1; rail2] in
+    let rail4 = rail3 |> Rail.repeat 6 in
+    let rail5 = rail4 |> Rail.scale 0.3 0.6 in
+    let rail6 =
+      Rail.map-repeat (fun i -> Rail.(rail5 ^ ((float i) *. 90.0))) 4
+    in
+    let path = rail6 |> Rail.to-loop (150pt, 10pt) in
+    [
+      rail1 |> Rail.gr-debug                    (50pt, 180pt);
+      rail2 |> Rail.gr-debug ?:Color.red        (50pt, 160pt);
+      rail3 |> Rail.gr-debug ?:Color.blue ?:3pt (50pt, 140pt);
+      rail4 |> Rail.gr-debug ?:Color.orange     (50pt, 120pt);
+      rail5 |> Rail.gr-debug ?:Color.red        (50pt, 100pt);
+      rail6 |> Rail.gr-debug ?:Color.blue       (50pt, 10pt);
+      [fill (Color.gray 0.8) path];
+    ] |> List.concat
 
-);
+  );
 
-+p{
-  \uwave{The quick fox} jumps \uwave{over} the \uwave{怠惰な犬}.
-}
+  +p{
+    曲線の中で最もよく用いられるのは円弧です。
+    `Rail.circular-sector` を用いれば、任意の角度の円弧を描画することができます。
+    デフォルトでは四分円を描きますが、オプション引数によって円弧の角度を指定することができます。
+  }
+
+  +horz-example(```
+    let rail1 = Rail.circular-sector 30pt in
+    let rail2 = Rail.circular-sector ?:30.0 50pt in
+    let rail3 = Rail.circular-sector ?:(320.) 30pt in
+  ```)(100pt)(
+    let rail1 = Rail.circular-sector 30pt in
+    let rail2 = Rail.circular-sector ?:30.0 50pt in
+    let rail3 = Rail.circular-sector ?:(320.) 30pt in
+    [
+      rail1 |> debug (40pt, 50pt);
+      rail2 |> debug (100pt, 50pt);
+      rail3 |> debug (200pt, 50pt);
+    ] |> List.concat
+  );
+
+  +p{
+    これを使えば、楕円形の吹き出しだって簡単に作れますね。
+  }
+
+  +horz-example(```
+    let speech-bubble =
+      Rail.(
+        (((circular-sector ?:(340.) 40pt) ^ 240.) |> Rail.scale 1.8 1.0)
+          --- Rail.from-curves [((-20pt, -20pt), (0pt, 0pt), (0pt, 0pt))]
+      )
+    in
+  ```)(100pt)(
+    let speech-bubble =
+      Rail.(
+        (((circular-sector ?:(340.) 40pt) ^ 240.) |> Rail.scale 2.0 1.0)
+          --- Rail.from-curves [((-30pt, -20pt), (0pt, 0pt), (0pt, 0pt))]
+      )
+    in
+      [
+        speech-bubble |> Rail.to-loop (60pt, 20pt) |> fill (Color.gray 0.9);
+        speech-bubble |> Rail.to-loop (60pt, 20pt) |> stroke 1pt Color.black
+      ]
+  );
+
+  +p{
+    `Rail` の応用として、 `WavyLine` というモジュールが用意されています。
+    これを用いると、任意の長さ、波長を持つなめらかな波線を引くことができます。
+  }
+
+  +horz-example(```
+    let wave-example conf (x, y) len =
+      [
+        fill (Color.gray 0.8)
+          (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
+        WavyLine.new len conf
+          |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
+      ]
+    in
+    [
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
+      wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;  % 振幅変更
+      wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;  % 波長変更
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;  % 波形変更
+
+      % 任意の長さで切り取ることが可能（波の途中で切っても OK）
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
+    ] |> List.concat
+  ```)(100pt)(
+    let wave-example conf (x, y) len =
+      [
+        fill (Color.gray 0.8)
+          (Gr.rectangle (x, y) (x +' len, y -' conf#amplitude *' 2.));
+        WavyLine.new len conf
+          |> Rail.to-path (x, y) |> stroke 0.5pt Color.black;
+      ]
+    in
+    [
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 95pt) 25pt;
+      wave-example (| amplitude = 2pt; lambda = 25pt; slope-ratio = 100.; |) ( 40pt, 95pt) 25pt;
+      wave-example (| amplitude = 5pt; lambda =  5pt; slope-ratio = 100.; |) ( 70pt, 95pt) 25pt;
+      wave-example (| amplitude = 5pt; lambda = 25pt; slope-ratio = 0.5 ; |) (100pt, 95pt) 25pt;
+
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 80pt) 5pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 65pt) 10pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 50pt) 25pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 35pt) 50pt;
+      wave-example (| amplitude = 3pt; lambda = 25pt; slope-ratio = 100.; |) ( 10pt, 20pt) 123.45pt;
+    ] |> List.concat
+  );
+
+  +p{
+    `WavyLine` によって波線を引く `\uwave` コマンドも用意されています。
+    \uwave{The quick fox} jumps \uwave{over} the \uwave{怠惰な犬}.
+  }
+
+>
 
 >
