@@ -325,11 +325,11 @@ document (|
 
   +horz-example(```
     let rail1 = Rail.circular-sector 30pt in
-    let rail2 = Rail.circular-sector ?:30.0 50pt in
+    let rail2 = Rail.circular-sector ?:30.0 80pt in
     let rail3 = Rail.circular-sector ?:(320.) 30pt in
   ```)(100pt)(
     let rail1 = Rail.circular-sector 30pt in
-    let rail2 = Rail.circular-sector ?:30.0 50pt in
+    let rail2 = Rail.circular-sector ?:30.0 80pt in
     let rail3 = Rail.circular-sector ?:(320.) 30pt in
     [
       rail1 |> debug (40pt, 50pt);
@@ -345,8 +345,8 @@ document (|
   +horz-example(```
     let speech-bubble =
       Rail.(
-        (((circular-sector ?:(340.) 40pt) ^ 240.) |> Rail.scale 1.8 1.0)
-          --- Rail.from-curves [((-20pt, -20pt), (0pt, 0pt), (0pt, 0pt))]
+        (((circular-sector ?:(340.) 40pt) ^ 240.) |> Rail.scale 2.0 1.0)
+          --- Rail.from-curves [((-30pt, -20pt), (0pt, 0pt), (0pt, 0pt))]
       )
     in
   ```)(100pt)(
